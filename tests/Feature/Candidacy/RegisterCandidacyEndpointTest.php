@@ -49,18 +49,93 @@ class RegisterCandidacyEndpointTest extends TestCase
         $response->assertJsonValidationErrors(['full_name', 'years_of_experience', 'cv_text']);
     }
 
-    public function test_it_rejects_input_that_fails_domain_validation_rules(): void
+    public function test_it_registers_a_candidacy_with_zero_experience_and_a_short_cv(): void
     {
         $response = $this->postJson('/api/v1/candidacies', [
             'full_name' => 'Jane Candidate',
             'email' => 'jane.candidate@mailinator.com',
             'years_of_experience' => 0,
-            'cv_text' => 'Too short.',
+            'cv_text' => 'N/A',
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.status', 'received');
+
+        $id = $response->json('data.id');
+
+        $this->assertDatabaseHas(CandidacyModel::class, [
+            'id' => $id,
+            'status' => 'received',
+        ]);
+    }
+
+    public function test_it_rejects_a_malformed_email(): void
+    {
+        $response = $this->postJson('/api/v1/candidacies', [
+            'full_name' => 'Jane Candidate',
+            'email' => 'not-an-email',
+            'years_of_experience' => 1,
+            'cv_text' => 'N/A',
         ]);
 
         $response->assertStatus(422);
-        $this->assertNotEmpty($response->json('errors.candidacy'));
+        $response->assertJsonValidationErrors(['email']);
+        $this->assertDatabaseCount(CandidacyModel::class, 0);
+    }
 
+    public function test_it_rejects_an_empty_full_name(): void
+    {
+        $response = $this->postJson('/api/v1/candidacies', [
+            'full_name' => '',
+            'email' => 'jane.candidate@example.com',
+            'years_of_experience' => 1,
+            'cv_text' => 'N/A',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['full_name']);
+        $this->assertDatabaseCount(CandidacyModel::class, 0);
+    }
+
+    public function test_it_rejects_an_empty_cv_text(): void
+    {
+        $response = $this->postJson('/api/v1/candidacies', [
+            'full_name' => 'Jane Candidate',
+            'email' => 'jane.candidate@example.com',
+            'years_of_experience' => 1,
+            'cv_text' => '',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['cv_text']);
+        $this->assertDatabaseCount(CandidacyModel::class, 0);
+    }
+
+    public function test_it_rejects_negative_years_of_experience(): void
+    {
+        $response = $this->postJson('/api/v1/candidacies', [
+            'full_name' => 'Jane Candidate',
+            'email' => 'jane.candidate@example.com',
+            'years_of_experience' => -1,
+            'cv_text' => 'N/A',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['years_of_experience']);
+        $this->assertDatabaseCount(CandidacyModel::class, 0);
+    }
+
+    public function test_it_rejects_a_non_integer_years_of_experience(): void
+    {
+        $response = $this->postJson('/api/v1/candidacies', [
+            'full_name' => 'Jane Candidate',
+            'email' => 'jane.candidate@example.com',
+            'years_of_experience' => 'two',
+            'cv_text' => 'N/A',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['years_of_experience']);
         $this->assertDatabaseCount(CandidacyModel::class, 0);
     }
 }

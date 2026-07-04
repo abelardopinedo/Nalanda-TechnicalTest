@@ -23,7 +23,7 @@ class RegisterCandidacyRequest extends FormRequest
     {
         return [
             'full_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255'],
             'years_of_experience' => ['required', 'integer', 'min:0'],
             'cv_text' => ['required', 'string'],
         ];
