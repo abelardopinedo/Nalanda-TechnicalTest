@@ -2,11 +2,11 @@
 
 namespace App\Infrastructure\Persistence;
 
-use App\Infrastructure\Persistence\Eloquent\ActivityLogModel;
 use App\Infrastructure\Persistence\Eloquent\CandidacyModel;
 use Candidacy\Domain\Candidacy;
 use Candidacy\Domain\CandidacyRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 
 class EloquentCandidacyRepository implements CandidacyRepository
@@ -31,7 +31,7 @@ class EloquentCandidacyRepository implements CandidacyRepository
             $model->save();
 
             foreach ($events as $event) {
-                ActivityLogModel::query()->create($this->mapper->eventToActivityLogAttributes($event));
+                Event::dispatch($event);
             }
         });
     }
