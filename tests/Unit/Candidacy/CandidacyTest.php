@@ -18,6 +18,7 @@ class CandidacyTest extends TestCase
     {
         return Candidacy::register(
             'candidacy-1',
+            'Jane Candidate',
             new Email('candidate@example.com'),
             new YearsOfExperience(4),
             new CvText('Some CV content.'),
