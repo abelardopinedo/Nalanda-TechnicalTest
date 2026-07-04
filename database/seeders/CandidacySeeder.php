@@ -52,14 +52,38 @@ class CandidacySeeder extends Seeder
 
         if ($stage === 'rejected') {
             $candidacy->reject();
+            $candidacy->recordValidationOutcome($this->rejectionReasons($candidacy));
 
             return;
         }
 
         $candidacy->validate();
+        $candidacy->recordValidationOutcome([]);
 
         if ($stage === 'assigned' && $evaluatorIds !== []) {
             $candidacy->assignEvaluator($evaluatorIds[$index % count($evaluatorIds)]);
         }
+    }
+
+    /**
+     * Mirrors what the real ValidationChain would have reported for this
+     * candidate's own data, so the seeded activity_log entry reads as
+     * genuine rather than a placeholder.
+     *
+     * @return list<string>
+     */
+    private function rejectionReasons(Candidacy $candidacy): array
+    {
+        $reasons = [];
+
+        if ($candidacy->yearsOfExperience()->value() < 2) {
+            $reasons[] = "At least 2 years of experience are required, {$candidacy->yearsOfExperience()->value()} given.";
+        }
+
+        if (mb_strlen(trim($candidacy->cvText()->value())) < 50) {
+            $reasons[] = 'The CV must be at least 50 characters long.';
+        }
+
+        return $reasons;
     }
 }
