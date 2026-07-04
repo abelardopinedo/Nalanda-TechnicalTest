@@ -86,6 +86,33 @@ class CandidacySummaryEndpointTest extends TestCase
         $response->assertJsonPath('data.validation.outcome', 'validated');
     }
 
+    public function test_summary_populates_time_to_decision_for_a_candidacy_built_from_the_validated_factory_state(): void
+    {
+        $candidacy = CandidacyModel::factory()->eligible()->validated()->create();
+
+        $response = $this->getJson("/api/v1/candidacies/{$candidacy->id}/summary");
+
+        $response->assertOk();
+        $response->assertJsonPath('data.validation.outcome', 'validated');
+        $timeToDecision = $response->json('data.derived.time_to_decision_days');
+        $this->assertNotNull($timeToDecision);
+        $this->assertGreaterThan(0, $timeToDecision);
+    }
+
+    public function test_summary_populates_time_to_decision_for_a_candidacy_built_from_the_rejected_factory_state(): void
+    {
+        $candidacy = CandidacyModel::factory()->ineligible()->rejected()->create();
+
+        $response = $this->getJson("/api/v1/candidacies/{$candidacy->id}/summary");
+
+        $response->assertOk();
+        $response->assertJsonPath('data.validation.outcome', 'rejected');
+        $this->assertNotEmpty($response->json('data.validation.failed_reasons'));
+        $timeToDecision = $response->json('data.derived.time_to_decision_days');
+        $this->assertNotNull($timeToDecision);
+        $this->assertGreaterThan(0, $timeToDecision);
+    }
+
     public function test_it_returns_404_for_an_unknown_candidacy(): void
     {
         $response = $this->getJson('/api/v1/candidacies/missing-id/summary');
