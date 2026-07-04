@@ -2,10 +2,14 @@
 
 namespace App\Infrastructure\Persistence\Eloquent;
 
+use Database\Factories\CandidacyModelFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CandidacyModel extends Model
 {
+    use HasFactory;
+
     protected $table = 'candidacies';
 
     public $incrementing = false;
@@ -27,4 +31,9 @@ class CandidacyModel extends Model
         'years_of_experience' => 'integer',
         'assigned_at' => 'immutable_datetime',
     ];
+
+    protected static function newFactory(): CandidacyModelFactory
+    {
+        return CandidacyModelFactory::new();
+    }
 }
