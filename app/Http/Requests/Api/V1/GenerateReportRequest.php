@@ -5,14 +5,15 @@ namespace App\Http\Requests\Api\V1;
 use App\Infrastructure\Query\CandidacyEvaluatorListingQuery;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
- * HTTP-level input guarding only: shape and whitelist membership of the
- * sort/filter/pagination parameters. The whitelist itself lives on
- * CandidacyEvaluatorListingQuery so both sides always agree on it.
+ * Accepts the same `filter[field]=value` shape as
+ * CandidacyEvaluatorListingRequest, validated against the exact same
+ * whitelist (CandidacyEvaluatorListingQuery::FIELDS) — so the report export
+ * can be scoped to the same subset of the consolidated listing a client
+ * already sees via GET /candidacies.
  */
-class CandidacyEvaluatorListingRequest extends FormRequest
+class GenerateReportRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -25,12 +26,9 @@ class CandidacyEvaluatorListingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'sort' => ['nullable', 'string', Rule::in(array_keys(CandidacyEvaluatorListingQuery::FIELDS))],
-            'direction' => ['nullable', 'string', Rule::in(['asc', 'desc'])],
+            'email' => ['required', 'string', 'email'],
             'filter' => ['nullable', 'array'],
             'filter.*' => ['nullable', 'string'],
-            'page' => ['nullable', 'integer', 'min:1'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
     }
 
@@ -45,16 +43,16 @@ class CandidacyEvaluatorListingRequest extends FormRequest
         });
     }
 
-    public function sort(): string
+    /**
+     * Optional client-supplied replay key: if a report already exists with
+     * this key, its current state is returned instead of creating a new one
+     * and re-dispatching the job.
+     */
+    public function idempotencyKey(): ?string
     {
-        return $this->string('sort')->toString() ?: CandidacyEvaluatorListingQuery::DEFAULT_SORT;
-    }
+        $key = $this->header('Idempotency-Key');
 
-    public function direction(): string
-    {
-        $direction = $this->string('direction')->lower()->toString();
-
-        return $direction === 'asc' ? 'asc' : CandidacyEvaluatorListingQuery::DEFAULT_DIRECTION;
+        return $key !== null && $key !== '' ? $key : null;
     }
 
     /**
@@ -68,13 +66,11 @@ class CandidacyEvaluatorListingRequest extends FormRequest
         );
     }
 
-    public function page(): int
+    /**
+     * @return array<string, string>|null
+     */
+    public function filtersSnapshot(): ?array
     {
-        return max(1, $this->integer('page', 1));
-    }
-
-    public function perPage(): int
-    {
-        return min(100, max(1, $this->integer('per_page', 15)));
+        return $this->filters() ?: null;
     }
 }

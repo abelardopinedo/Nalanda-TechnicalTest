@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\Query;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -37,6 +38,45 @@ final class CandidacyEvaluatorListingQuery
     public const DEFAULT_DIRECTION = 'desc';
 
     /**
+     * Filter field names not present in self::FIELDS, if any — shared by
+     * every caller that needs to reject unknown filters the same way
+     * (the listing request and the report request), so the whitelist check
+     * itself is defined once.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<string>
+     */
+    public static function unknownFilterFields(array $filters): array
+    {
+        return array_values(array_diff(array_keys($filters), array_keys(self::FIELDS)));
+    }
+
+    /**
+     * The consolidated candidacy/evaluator listing, unfiltered and
+     * unsorted: candidacies joined to their evaluator. Only an assigned
+     * candidacy has an evaluator, so the inner join naturally restricts the
+     * listing to assigned rows without a separate filter.
+     *
+     * Shared by paginate() (the API listing) and the Excel report export,
+     * so both read the exact same definition of "the consolidated listing"
+     * rather than maintaining two copies of this join/select.
+     */
+    public function baseQuery(): Builder
+    {
+        return DB::table('candidacies')
+            ->join('evaluators', 'evaluators.id', '=', 'candidacies.evaluator_id')
+            ->select([
+                'candidacies.id as candidacy_id',
+                'candidacies.full_name as candidate_name',
+                'candidacies.email as candidate_email',
+                'candidacies.years_of_experience as years',
+                'candidacies.evaluator_id as evaluator_id',
+                'evaluators.name as evaluator_name',
+                'candidacies.assigned_at as assigned_at',
+            ]);
+    }
+
+    /**
      * @param  array<string, string>  $filters  apiField => value, both whitelisted against self::FIELDS
      */
     public function paginate(
@@ -49,20 +89,7 @@ final class CandidacyEvaluatorListingQuery
         $sortColumn = self::FIELDS[$sort] ?? throw new InvalidArgumentException("Unsortable field: {$sort}");
         $direction = $direction === 'asc' ? 'asc' : 'desc';
 
-        // Step 1: page the candidacies joined to their evaluator. Only an
-        // assigned candidacy has an evaluator, so the inner join naturally
-        // restricts the listing to assigned rows without a separate filter.
-        $query = DB::table('candidacies')
-            ->join('evaluators', 'evaluators.id', '=', 'candidacies.evaluator_id')
-            ->select([
-                'candidacies.id as candidacy_id',
-                'candidacies.full_name as candidate_name',
-                'candidacies.email as candidate_email',
-                'candidacies.years_of_experience as years',
-                'candidacies.evaluator_id as evaluator_id',
-                'evaluators.name as evaluator_name',
-                'candidacies.assigned_at as assigned_at',
-            ]);
+        $query = $this->baseQuery();
 
         foreach ($filters as $field => $value) {
             $column = self::FIELDS[$field] ?? throw new InvalidArgumentException("Unfilterable field: {$field}");
@@ -73,7 +100,7 @@ final class CandidacyEvaluatorListingQuery
             ->orderBy($sortColumn, $direction)
             ->paginate(perPage: $perPage, page: $page);
 
-        // Step 2: fetch aggregates only for the evaluator IDs present on this
+        // Fetch aggregates only for the evaluator IDs present on this
         // page (not the whole evaluators table). We deliberately avoid SQL
         // GROUP_CONCAT() for the email list: MySQL silently truncates it at
         // `group_concat_max_len` (1024 bytes by default), which would drop
@@ -99,8 +126,8 @@ final class CandidacyEvaluatorListingQuery
             ->groupBy('evaluator_id')
             ->map(static fn ($rows) => $rows->pluck('email')->implode(', '));
 
-        // Step 3: merge the page with its aggregates via keyBy + map, rather
-        // than re-querying or re-joining per row.
+        // Merge the page with its aggregates via keyBy + map, rather than
+        // re-querying or re-joining per row.
         $merged = $paginator->getCollection()->map(static function (object $row) use ($totalAssignedByEvaluator, $candidateEmailsByEvaluator) {
             $row->evaluator_total_assigned = (int) ($totalAssignedByEvaluator->get($row->evaluator_id)->total_assigned ?? 0);
             $row->evaluator_candidate_emails = $candidateEmailsByEvaluator->get($row->evaluator_id, '');
