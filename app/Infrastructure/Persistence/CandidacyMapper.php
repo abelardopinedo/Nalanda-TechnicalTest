@@ -8,6 +8,7 @@ use Candidacy\Domain\CandidacyStatus;
 use Candidacy\Domain\CvText;
 use Candidacy\Domain\Email;
 use Candidacy\Domain\Event\CandidacyRegistered;
+use Candidacy\Domain\Event\CandidacyValidated;
 use Candidacy\Domain\Event\EvaluatorAssigned;
 use Candidacy\Domain\YearsOfExperience;
 use Illuminate\Support\Str;
@@ -66,6 +67,19 @@ final class CandidacyMapper
                 'evaluator_id' => $event->evaluatorId,
                 'action' => 'evaluator_assigned',
                 'payload' => ['evaluator_id' => $event->evaluatorId],
+                'occurred_at' => $event->occurredOn,
+            ],
+            $event instanceof CandidacyValidated => [
+                'id' => (string) Str::uuid7(),
+                'candidacy_id' => $event->candidacyId,
+                'evaluator_id' => null,
+                'action' => $event->outcome === CandidacyStatus::VALIDATED
+                    ? 'candidacy_validated'
+                    : 'candidacy_rejected',
+                'payload' => [
+                    'outcome' => $event->outcome->value,
+                    'reasons' => $event->reasons,
+                ],
                 'occurred_at' => $event->occurredOn,
             ],
             default => throw new InvalidArgumentException('Unsupported domain event: ' . $event::class),

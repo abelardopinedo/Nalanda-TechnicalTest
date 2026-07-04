@@ -7,6 +7,7 @@ use Candidacy\Domain\CandidacyStatus;
 use Candidacy\Domain\CvText;
 use Candidacy\Domain\Email;
 use Candidacy\Domain\Event\CandidacyRegistered;
+use Candidacy\Domain\Event\CandidacyValidated;
 use Candidacy\Domain\Event\EvaluatorAssigned;
 use Candidacy\Domain\YearsOfExperience;
 use DomainException;
@@ -80,6 +81,40 @@ class CandidacyTest extends TestCase
         $this->assertInstanceOf(EvaluatorAssigned::class, $events[0]);
         $this->assertSame('candidacy-1', $events[0]->candidacyId);
         $this->assertSame('evaluator-1', $events[0]->evaluatorId);
+    }
+
+    public function test_recording_a_validation_outcome_after_validating_captures_the_empty_reasons(): void
+    {
+        $candidacy = $this->registerCandidacy();
+        $candidacy->validate();
+        $candidacy->pullDomainEvents();
+
+        $candidacy->recordValidationOutcome([]);
+
+        $events = $candidacy->pullDomainEvents();
+
+        $this->assertCount(1, $events);
+        $this->assertInstanceOf(CandidacyValidated::class, $events[0]);
+        $this->assertSame('candidacy-1', $events[0]->candidacyId);
+        $this->assertSame(CandidacyStatus::VALIDATED, $events[0]->outcome);
+        $this->assertSame([], $events[0]->reasons);
+    }
+
+    public function test_recording_a_validation_outcome_after_rejecting_captures_the_failed_reasons(): void
+    {
+        $candidacy = $this->registerCandidacy();
+        $candidacy->reject();
+        $candidacy->pullDomainEvents();
+
+        $candidacy->recordValidationOutcome(['At least 2 years of experience are required, 0 given.']);
+
+        $events = $candidacy->pullDomainEvents();
+
+        $this->assertCount(1, $events);
+        $this->assertInstanceOf(CandidacyValidated::class, $events[0]);
+        $this->assertSame('candidacy-1', $events[0]->candidacyId);
+        $this->assertSame(CandidacyStatus::REJECTED, $events[0]->outcome);
+        $this->assertSame(['At least 2 years of experience are required, 0 given.'], $events[0]->reasons);
     }
 
     public function test_a_rejected_candidacy_cannot_be_assigned(): void

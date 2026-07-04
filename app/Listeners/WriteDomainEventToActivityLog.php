@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Infrastructure\Persistence\CandidacyMapper;
 use App\Infrastructure\Persistence\Eloquent\ActivityLogModel;
 use Candidacy\Domain\Event\CandidacyRegistered;
+use Candidacy\Domain\Event\CandidacyValidated;
 use Candidacy\Domain\Event\EvaluatorAssigned;
 
 class WriteDomainEventToActivityLog
@@ -13,7 +14,7 @@ class WriteDomainEventToActivityLog
     {
     }
 
-    public function handle(CandidacyRegistered|EvaluatorAssigned $event): void
+    public function handle(CandidacyRegistered|EvaluatorAssigned|CandidacyValidated $event): void
     {
         ActivityLogModel::query()->create($this->mapper->eventToActivityLogAttributes($event));
     }

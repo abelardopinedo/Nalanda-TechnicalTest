@@ -47,6 +47,8 @@ final class ValidateCandidacy
                 $candidacy->reject();
             }
 
+            $candidacy->recordValidationOutcome($report->reasons());
+
             $this->repository->save($candidacy);
 
             return new CandidacyValidationOutcome($candidacy, $report);

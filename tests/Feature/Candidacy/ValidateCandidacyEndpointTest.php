@@ -3,6 +3,7 @@
 namespace Tests\Feature\Candidacy;
 
 use App\Infrastructure\Persistence\CandidacyMapper;
+use App\Infrastructure\Persistence\Eloquent\ActivityLogModel;
 use App\Infrastructure\Persistence\Eloquent\CandidacyModel;
 use App\Infrastructure\Persistence\EloquentCandidacyRepository;
 use Candidacy\Domain\Candidacy;
@@ -35,6 +36,18 @@ class ValidateCandidacyEndpointTest extends TestCase
             'id' => $candidacyId,
             'status' => 'validated',
         ]);
+
+        $this->assertDatabaseHas(ActivityLogModel::class, [
+            'candidacy_id' => $candidacyId,
+            'action' => 'candidacy_validated',
+        ]);
+
+        $entry = ActivityLogModel::query()->where('candidacy_id', $candidacyId)
+            ->where('action', 'candidacy_validated')
+            ->firstOrFail();
+
+        $this->assertSame('validated', $entry->payload['outcome']);
+        $this->assertSame([], $entry->payload['reasons']);
     }
 
     public function test_it_rejects_a_candidacy_that_fails_the_chain(): void
@@ -55,6 +68,18 @@ class ValidateCandidacyEndpointTest extends TestCase
             'id' => $candidacyId,
             'status' => 'rejected',
         ]);
+
+        $this->assertDatabaseHas(ActivityLogModel::class, [
+            'candidacy_id' => $candidacyId,
+            'action' => 'candidacy_rejected',
+        ]);
+
+        $entry = ActivityLogModel::query()->where('candidacy_id', $candidacyId)
+            ->where('action', 'candidacy_rejected')
+            ->firstOrFail();
+
+        $this->assertSame('rejected', $entry->payload['outcome']);
+        $this->assertNotEmpty($entry->payload['reasons']);
     }
 
     public function test_it_returns_409_when_validating_a_candidacy_a_second_time(): void

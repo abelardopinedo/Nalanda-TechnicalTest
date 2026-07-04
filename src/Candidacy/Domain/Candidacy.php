@@ -3,6 +3,7 @@
 namespace Candidacy\Domain;
 
 use Candidacy\Domain\Event\CandidacyRegistered;
+use Candidacy\Domain\Event\CandidacyValidated;
 use Candidacy\Domain\Event\EvaluatorAssigned;
 use DateTimeImmutable;
 
@@ -108,6 +109,17 @@ final class Candidacy
     public function reject(): void
     {
         $this->transitionTo(CandidacyStatus::REJECTED);
+    }
+
+    /**
+     * Records the audit trail entry for a ValidationChain run, once the
+     * status has already transitioned to its outcome (VALIDATED or REJECTED).
+     *
+     * @param list<string> $reasons
+     */
+    public function recordValidationOutcome(array $reasons): void
+    {
+        $this->recordThat(new CandidacyValidated($this->id, $this->status, $reasons));
     }
 
     public function assignEvaluator(string $evaluatorId): void

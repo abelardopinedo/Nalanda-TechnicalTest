@@ -4,6 +4,7 @@ namespace App\Infrastructure\Providers;
 
 use App\Listeners\WriteDomainEventToActivityLog;
 use Candidacy\Domain\Event\CandidacyRegistered;
+use Candidacy\Domain\Event\CandidacyValidated;
 use Candidacy\Domain\Event\EvaluatorAssigned;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -14,5 +15,6 @@ class EventServiceProvider extends ServiceProvider
     {
         Event::listen(CandidacyRegistered::class, WriteDomainEventToActivityLog::class);
         Event::listen(EvaluatorAssigned::class, WriteDomainEventToActivityLog::class);
+        Event::listen(CandidacyValidated::class, WriteDomainEventToActivityLog::class);
     }
 }
