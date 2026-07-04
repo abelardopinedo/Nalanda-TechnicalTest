@@ -58,9 +58,6 @@ class CandidacyTest extends TestCase
     {
         $candidacy = $this->registerCandidacy();
 
-        $candidacy->startReview();
-        $this->assertSame(CandidacyStatus::UNDER_REVIEW, $candidacy->status());
-
         $candidacy->validate();
         $this->assertSame(CandidacyStatus::VALIDATED, $candidacy->status());
 
@@ -72,7 +69,6 @@ class CandidacyTest extends TestCase
     public function test_assigning_an_evaluator_records_an_evaluator_assigned_event(): void
     {
         $candidacy = $this->registerCandidacy();
-        $candidacy->startReview();
         $candidacy->validate();
         $candidacy->pullDomainEvents();
 
@@ -89,7 +85,6 @@ class CandidacyTest extends TestCase
     public function test_a_rejected_candidacy_cannot_be_assigned(): void
     {
         $candidacy = $this->registerCandidacy();
-        $candidacy->startReview();
         $candidacy->reject();
 
         $this->expectException(DomainException::class);

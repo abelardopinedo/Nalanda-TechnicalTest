@@ -20,7 +20,7 @@ class CandidacySeeder extends Seeder
 
         $candidates = [
             ['name' => 'Diego Martinez', 'email' => 'diego.martinez@example.com', 'years' => 2, 'cv' => 'Backend developer with 2 years of experience in PHP and Laravel.', 'stage' => 'received'],
-            ['name' => 'Elena Petrova', 'email' => 'elena.petrova@example.com', 'years' => 5, 'cv' => 'Full-stack engineer with 5 years across React and Node.js.', 'stage' => 'under_review'],
+            ['name' => 'Elena Petrova', 'email' => 'elena.petrova@example.com', 'years' => 5, 'cv' => 'Full-stack engineer with 5 years across React and Node.js.', 'stage' => 'validated'],
             ['name' => 'Farid Haidari', 'email' => 'farid.haidari@example.com', 'years' => 8, 'cv' => 'Senior engineer specialising in distributed systems, 8 years.', 'stage' => 'validated'],
             ['name' => 'Grace Okafor', 'email' => 'grace.okafor@example.com', 'years' => 6, 'cv' => 'Platform engineer with a strong DDD and hexagonal architecture background.', 'stage' => 'assigned'],
             ['name' => 'Hiro Tanaka', 'email' => 'hiro.tanaka@example.com', 'years' => 1, 'cv' => 'Junior developer, recent bootcamp graduate.', 'stage' => 'rejected'],
@@ -47,12 +47,6 @@ class CandidacySeeder extends Seeder
     private function advanceToStage(Candidacy $candidacy, string $stage, array $evaluatorIds, int $index): void
     {
         if ($stage === 'received') {
-            return;
-        }
-
-        $candidacy->startReview();
-
-        if ($stage === 'under_review') {
             return;
         }
 

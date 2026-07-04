@@ -57,7 +57,6 @@ trait CandidacyRepositoryContractTests
 
         $repository = $this->repository();
         $candidacy = $this->makeCandidacy('candidacy-contract-2');
-        $candidacy->startReview();
         $candidacy->validate();
         $candidacy->assignEvaluator('evaluator-contract-1');
 

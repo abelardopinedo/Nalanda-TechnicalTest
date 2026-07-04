@@ -90,7 +90,6 @@ class AssignEvaluatorTest extends TestCase
             new CvText('Some CV content.'),
         );
 
-        $candidacy->startReview();
         $candidacy->validate();
 
         return $candidacy;

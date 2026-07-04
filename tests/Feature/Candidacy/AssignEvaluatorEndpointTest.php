@@ -97,7 +97,6 @@ class AssignEvaluatorEndpointTest extends TestCase
         $repository = new EloquentCandidacyRepository(new CandidacyMapper());
 
         $candidacy = $this->registerCandidacy($repository);
-        $candidacy->startReview();
         $candidacy->validate();
         $repository->save($candidacy);
 

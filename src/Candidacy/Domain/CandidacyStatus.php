@@ -7,7 +7,6 @@ use DomainException;
 enum CandidacyStatus: string
 {
     case RECEIVED = 'received';
-    case UNDER_REVIEW = 'under_review';
     case VALIDATED = 'validated';
     case REJECTED = 'rejected';
     case ASSIGNED = 'assigned';
@@ -18,8 +17,7 @@ enum CandidacyStatus: string
     public function allowedTransitions(): array
     {
         return match ($this) {
-            self::RECEIVED => [self::UNDER_REVIEW],
-            self::UNDER_REVIEW => [self::VALIDATED, self::REJECTED],
+            self::RECEIVED => [self::VALIDATED, self::REJECTED],
             self::VALIDATED => [self::ASSIGNED],
             self::REJECTED, self::ASSIGNED => [],
         };

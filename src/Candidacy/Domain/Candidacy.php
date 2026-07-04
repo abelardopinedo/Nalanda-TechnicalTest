@@ -100,11 +100,6 @@ final class Candidacy
         return $this->assignedAt;
     }
 
-    public function startReview(): void
-    {
-        $this->transitionTo(CandidacyStatus::UNDER_REVIEW);
-    }
-
     public function validate(): void
     {
         $this->transitionTo(CandidacyStatus::VALIDATED);

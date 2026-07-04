@@ -8,15 +8,10 @@ use PHPUnit\Framework\TestCase;
 
 class CandidacyStatusTest extends TestCase
 {
-    public function test_received_can_transition_to_under_review(): void
+    public function test_received_can_transition_to_validated_or_rejected(): void
     {
-        $this->assertTrue(CandidacyStatus::RECEIVED->canTransitionTo(CandidacyStatus::UNDER_REVIEW));
-    }
-
-    public function test_under_review_can_transition_to_validated_or_rejected(): void
-    {
-        $this->assertTrue(CandidacyStatus::UNDER_REVIEW->canTransitionTo(CandidacyStatus::VALIDATED));
-        $this->assertTrue(CandidacyStatus::UNDER_REVIEW->canTransitionTo(CandidacyStatus::REJECTED));
+        $this->assertTrue(CandidacyStatus::RECEIVED->canTransitionTo(CandidacyStatus::VALIDATED));
+        $this->assertTrue(CandidacyStatus::RECEIVED->canTransitionTo(CandidacyStatus::REJECTED));
     }
 
     public function test_rejected_is_a_terminal_state(): void
@@ -33,7 +28,7 @@ class CandidacyStatusTest extends TestCase
 
     public function test_guard_allows_a_legal_transition(): void
     {
-        CandidacyStatus::RECEIVED->guardTransitionTo(CandidacyStatus::UNDER_REVIEW);
+        CandidacyStatus::RECEIVED->guardTransitionTo(CandidacyStatus::VALIDATED);
 
         $this->addToAssertionCount(1);
     }

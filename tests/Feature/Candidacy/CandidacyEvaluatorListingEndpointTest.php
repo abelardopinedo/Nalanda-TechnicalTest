@@ -149,7 +149,6 @@ class CandidacyEvaluatorListingEndpointTest extends TestCase
             new CvText('Some CV content that is long enough to pass validation.'),
         );
 
-        $candidacy->startReview();
         $candidacy->validate();
         $candidacy->assignEvaluator($evaluatorId);
 
