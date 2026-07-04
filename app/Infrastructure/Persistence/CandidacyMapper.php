@@ -53,7 +53,7 @@ final class CandidacyMapper
     {
         return match (true) {
             $event instanceof CandidacyRegistered => [
-                'id' => (string) Str::uuid(),
+                'id' => (string) Str::uuid7(),
                 'candidacy_id' => $event->candidacyId,
                 'evaluator_id' => null,
                 'action' => 'candidacy_registered',
@@ -61,7 +61,7 @@ final class CandidacyMapper
                 'occurred_at' => $event->occurredOn,
             ],
             $event instanceof EvaluatorAssigned => [
-                'id' => (string) Str::uuid(),
+                'id' => (string) Str::uuid7(),
                 'candidacy_id' => $event->candidacyId,
                 'evaluator_id' => $event->evaluatorId,
                 'action' => 'evaluator_assigned',

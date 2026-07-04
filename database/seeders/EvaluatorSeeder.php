@@ -17,7 +17,7 @@ class EvaluatorSeeder extends Seeder
         ] as $evaluator) {
             EvaluatorModel::query()->firstOrCreate(
                 ['email' => $evaluator['email']],
-                ['id' => (string) Str::uuid(), 'name' => $evaluator['name']],
+                ['id' => (string) Str::uuid7(), 'name' => $evaluator['name']],
             );
         }
     }

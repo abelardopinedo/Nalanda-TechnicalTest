@@ -17,7 +17,7 @@ class EloquentCandidacyRepository implements CandidacyRepository
 
     public function nextIdentity(): string
     {
-        return (string) Str::uuid();
+        return (string) Str::uuid7();
     }
 
     public function save(Candidacy $candidacy): void
