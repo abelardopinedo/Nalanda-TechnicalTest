@@ -83,6 +83,27 @@ class GenerateReportJobTest extends TestCase
         $this->assertSame(3, $spreadsheet->getSheet(0)->getHighestRow());
     }
 
+    public function test_a_report_with_a_years_of_experience_range_only_includes_matching_candidacies(): void
+    {
+        Storage::fake(ReportModel::DISK);
+        Mail::fake();
+
+        CandidacyModel::factory()->eligible()->assigned()->create(['years_of_experience' => 3]);
+        CandidacyModel::factory()->eligible()->assigned()->create(['years_of_experience' => 6]);
+        CandidacyModel::factory()->eligible()->assigned()->create(['years_of_experience' => 9]);
+
+        $report = ReportModel::factory()->create([
+            'filters_snapshot' => ['years_of_experience_min' => 4, 'years_of_experience_max' => 8],
+        ]);
+
+        GenerateReportJob::dispatchSync($report->id);
+
+        $spreadsheet = IOFactory::load(Storage::disk(ReportModel::DISK)->path($report->fresh()->file_path));
+
+        // Heading row + exactly the 1 candidacy with years_of_experience = 6.
+        $this->assertSame(2, $spreadsheet->getSheet(0)->getHighestRow());
+    }
+
     public function test_an_unfiltered_report_includes_every_assigned_candidacy(): void
     {
         Storage::fake(ReportModel::DISK);

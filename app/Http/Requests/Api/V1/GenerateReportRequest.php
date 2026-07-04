@@ -2,12 +2,14 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Http\Requests\Api\V1\Concerns\ResolvesCandidacyListingFilters;
 use App\Infrastructure\Query\CandidacyEvaluatorListingQuery;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Accepts the same `filter[field]=value` shape as
+ * Accepts the same `filter[field]=value` shape (plus the
+ * years_of_experience_min/years_of_experience_max range params) as
  * CandidacyEvaluatorListingRequest, validated against the exact same
  * whitelist (CandidacyEvaluatorListingQuery::FIELDS) — so the report export
  * can be scoped to the same subset of the consolidated listing a client
@@ -15,6 +17,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class GenerateReportRequest extends FormRequest
 {
+    use ResolvesCandidacyListingFilters;
+
     public function authorize(): bool
     {
         return true;
@@ -29,6 +33,7 @@ class GenerateReportRequest extends FormRequest
             'email' => ['required', 'string', 'email'],
             'filter' => ['nullable', 'array'],
             'filter.*' => ['nullable', 'string'],
+            ...$this->rangeFilterRules(),
         ];
     }
 
@@ -56,18 +61,7 @@ class GenerateReportRequest extends FormRequest
     }
 
     /**
-     * @return array<string, string>
-     */
-    public function filters(): array
-    {
-        return array_filter(
-            $this->input('filter', []),
-            static fn (mixed $value): bool => $value !== null && $value !== '',
-        );
-    }
-
-    /**
-     * @return array<string, string>|null
+     * @return array<string, mixed>|null
      */
     public function filtersSnapshot(): ?array
     {

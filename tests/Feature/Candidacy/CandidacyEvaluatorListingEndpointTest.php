@@ -91,6 +91,61 @@ class CandidacyEvaluatorListingEndpointTest extends TestCase
         $response->assertJsonValidationErrors(['filter']);
     }
 
+    public function test_it_filters_by_a_minimum_years_of_experience(): void
+    {
+        $evaluator = $this->createEvaluator('Alice Reviewer');
+
+        $this->assignCandidacy($evaluator, 'Low Years', 'low@example.com', 3);
+        $this->assignCandidacy($evaluator, 'Mid Years', 'mid@example.com', 6);
+        $this->assignCandidacy($evaluator, 'High Years', 'high@example.com', 9);
+
+        $response = $this->getJson('/api/v1/candidacies?years_of_experience_min=6');
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data');
+        $years = collect($response->json('data'))->pluck('years_of_experience')->sort()->values();
+        $this->assertSame([6, 9], $years->all());
+    }
+
+    public function test_it_filters_by_a_maximum_years_of_experience(): void
+    {
+        $evaluator = $this->createEvaluator('Alice Reviewer');
+
+        $this->assignCandidacy($evaluator, 'Low Years', 'low@example.com', 3);
+        $this->assignCandidacy($evaluator, 'Mid Years', 'mid@example.com', 6);
+        $this->assignCandidacy($evaluator, 'High Years', 'high@example.com', 9);
+
+        $response = $this->getJson('/api/v1/candidacies?years_of_experience_max=6');
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data');
+        $years = collect($response->json('data'))->pluck('years_of_experience')->sort()->values();
+        $this->assertSame([3, 6], $years->all());
+    }
+
+    public function test_it_filters_by_a_range_of_years_of_experience(): void
+    {
+        $evaluator = $this->createEvaluator('Alice Reviewer');
+
+        $this->assignCandidacy($evaluator, 'Low Years', 'low@example.com', 3);
+        $this->assignCandidacy($evaluator, 'Mid Years', 'mid@example.com', 6);
+        $this->assignCandidacy($evaluator, 'High Years', 'high@example.com', 9);
+
+        $response = $this->getJson('/api/v1/candidacies?years_of_experience_min=4&years_of_experience_max=8');
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.years_of_experience', 6);
+    }
+
+    public function test_it_rejects_a_non_integer_years_of_experience_range_bound(): void
+    {
+        $response = $this->getJson('/api/v1/candidacies?years_of_experience_min=not-a-number');
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['years_of_experience_min']);
+    }
+
     public function test_it_overrides_the_default_sort(): void
     {
         $evaluator = $this->createEvaluator('Alice Reviewer');

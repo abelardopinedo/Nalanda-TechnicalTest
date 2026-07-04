@@ -58,6 +58,39 @@ class GenerateReportEndpointTest extends TestCase
         $this->assertSame(['evaluator_name' => 'Alice Reviewer'], $report->filters_snapshot);
     }
 
+    public function test_it_stores_a_years_of_experience_range_in_the_filters_snapshot(): void
+    {
+        Queue::fake();
+
+        $response = $this->postJson('/api/v1/reports?years_of_experience_min=3&years_of_experience_max=8', [
+            'email' => 'reviewer@example.com',
+        ]);
+
+        $response->assertStatus(202);
+
+        $report = ReportModel::query()->findOrFail($response->json('report_id'));
+        // assertEquals, not assertSame: MySQL's JSON column doesn't
+        // preserve key insertion order on round-trip.
+        $this->assertEquals([
+            'years_of_experience_min' => 3,
+            'years_of_experience_max' => 8,
+        ], $report->filters_snapshot);
+    }
+
+    public function test_it_rejects_a_non_integer_years_of_experience_range_bound(): void
+    {
+        Queue::fake();
+
+        $response = $this->postJson('/api/v1/reports?years_of_experience_min=not-a-number', [
+            'email' => 'reviewer@example.com',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['years_of_experience_min']);
+
+        Queue::assertNothingPushed();
+    }
+
     public function test_it_rejects_a_filter_on_a_column_outside_the_whitelist(): void
     {
         Queue::fake();

@@ -3,7 +3,6 @@
 namespace App\Infrastructure\Report;
 
 use App\Infrastructure\Query\CandidacyEvaluatorListingQuery;
-use InvalidArgumentException;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 /**
@@ -36,11 +35,7 @@ final class CandidacyReportExport implements WithMultipleSheets
         // raw `candidacies.id`, which the existing select doesn't expose.
         $query = $this->query->baseQuery();
 
-        foreach ($this->filters as $field => $value) {
-            $column = CandidacyEvaluatorListingQuery::FIELDS[$field]
-                ?? throw new InvalidArgumentException("Unfilterable field: {$field}");
-            $query->where($column, $value);
-        }
+        $this->query->applyFilters($query, $this->filters);
 
         $ids = $query
             ->orderBy(

@@ -38,6 +38,16 @@ final class CandidacyEvaluatorListingQuery
     public const DEFAULT_DIRECTION = 'desc';
 
     /**
+     * Reserved filter keys for a range on years_of_experience, combined
+     * (AND) with any exact-match entries from self::FIELDS. Kept separate
+     * from FIELDS since they don't map 1:1 to a single-value comparison the
+     * way an exact-match entry does.
+     */
+    public const YEARS_MIN_FILTER = 'years_of_experience_min';
+
+    public const YEARS_MAX_FILTER = 'years_of_experience_max';
+
+    /**
      * Filter field names not present in self::FIELDS, if any — shared by
      * every caller that needs to reject unknown filters the same way
      * (the listing request and the report request), so the whitelist check
@@ -49,6 +59,34 @@ final class CandidacyEvaluatorListingQuery
     public static function unknownFilterFields(array $filters): array
     {
         return array_values(array_diff(array_keys($filters), array_keys(self::FIELDS)));
+    }
+
+    /**
+     * Applies both the exact-match FIELDS filters and the
+     * years_of_experience range filter to $query, in place. Shared by
+     * paginate() and the Excel report export so both apply filters the
+     * exact same way instead of maintaining two copies of this logic.
+     *
+     * @param  array<string, mixed>  $filters  apiField => value, plus optionally YEARS_MIN_FILTER/YEARS_MAX_FILTER
+     */
+    public function applyFilters(Builder $query, array $filters): void
+    {
+        foreach ($filters as $field => $value) {
+            if ($field === self::YEARS_MIN_FILTER) {
+                $query->where('candidacies.years_of_experience', '>=', $value);
+
+                continue;
+            }
+
+            if ($field === self::YEARS_MAX_FILTER) {
+                $query->where('candidacies.years_of_experience', '<=', $value);
+
+                continue;
+            }
+
+            $column = self::FIELDS[$field] ?? throw new InvalidArgumentException("Unfilterable field: {$field}");
+            $query->where($column, $value);
+        }
     }
 
     /**
@@ -91,10 +129,7 @@ final class CandidacyEvaluatorListingQuery
 
         $query = $this->baseQuery();
 
-        foreach ($filters as $field => $value) {
-            $column = self::FIELDS[$field] ?? throw new InvalidArgumentException("Unfilterable field: {$field}");
-            $query->where($column, $value);
-        }
+        $this->applyFilters($query, $filters);
 
         $paginator = $query
             ->orderBy($sortColumn, $direction)

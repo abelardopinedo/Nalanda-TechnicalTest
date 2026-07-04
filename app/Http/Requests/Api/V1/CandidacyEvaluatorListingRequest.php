@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Http\Requests\Api\V1\Concerns\ResolvesCandidacyListingFilters;
 use App\Infrastructure\Query\CandidacyEvaluatorListingQuery;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,6 +15,8 @@ use Illuminate\Validation\Rule;
  */
 class CandidacyEvaluatorListingRequest extends FormRequest
 {
+    use ResolvesCandidacyListingFilters;
+
     public function authorize(): bool
     {
         return true;
@@ -31,6 +34,7 @@ class CandidacyEvaluatorListingRequest extends FormRequest
             'filter.*' => ['nullable', 'string'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            ...$this->rangeFilterRules(),
         ];
     }
 
@@ -55,17 +59,6 @@ class CandidacyEvaluatorListingRequest extends FormRequest
         $direction = $this->string('direction')->lower()->toString();
 
         return $direction === 'asc' ? 'asc' : CandidacyEvaluatorListingQuery::DEFAULT_DIRECTION;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function filters(): array
-    {
-        return array_filter(
-            $this->input('filter', []),
-            static fn (mixed $value): bool => $value !== null && $value !== '',
-        );
     }
 
     public function page(): int
