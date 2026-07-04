@@ -67,4 +67,27 @@ class CandidacyModelFactoryTest extends TestCase
         $this->assertSame($candidacy->evaluator_id, $entry->evaluator_id);
         $this->assertSame($candidacy->evaluator_id, $entry->payload['evaluator_id']);
     }
+
+    public function test_assigned_state_also_seeds_the_prior_validation_entry_in_chronological_order(): void
+    {
+        $candidacy = CandidacyModel::factory()->assigned()->create();
+
+        $validatedEntry = ActivityLogModel::query()
+            ->where('candidacy_id', $candidacy->id)
+            ->where('action', 'candidacy_validated')
+            ->firstOrFail();
+
+        $assignedEntry = ActivityLogModel::query()
+            ->where('candidacy_id', $candidacy->id)
+            ->where('action', 'evaluator_assigned')
+            ->firstOrFail();
+
+        $this->assertSame('validated', $validatedEntry->payload['outcome']);
+        $this->assertSame([], $validatedEntry->payload['reasons']);
+
+        // Assignment requires prior VALIDATED status: created_at <= validated <= assigned <= now.
+        $this->assertTrue($validatedEntry->occurred_at->isAfter($candidacy->created_at));
+        $this->assertTrue($assignedEntry->occurred_at->isAfter($validatedEntry->occurred_at));
+        $this->assertTrue($assignedEntry->occurred_at->lessThanOrEqualTo(now()));
+    }
 }

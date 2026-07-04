@@ -6,6 +6,7 @@ use App\Infrastructure\Persistence\Eloquent\ActivityLogModel;
 use App\Infrastructure\Persistence\Eloquent\CandidacyModel;
 use Candidacy\Domain\CandidacyStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -87,25 +88,33 @@ class CandidacyModelFactory extends Factory
     }
 
     /**
-     * Marks the candidacy as ASSIGNED, with both evaluator_id and
-     * assigned_at set, plus the matching evaluator_assigned activity_log
-     * entry. If no evaluator id is given, a new evaluator is created for it
-     * via EvaluatorModelFactory.
+     * Marks the candidacy as ASSIGNED. Assignment requires prior VALIDATED
+     * status (the domain guard enforces this), so the fixture must carry
+     * that history too: it reuses validated()'s own log-seeding logic to
+     * write the same candidacy_validated entry, then sequences evaluator_id/
+     * assigned_at and the evaluator_assigned entry strictly after it. If no
+     * evaluator id is given, a new evaluator is created for it via
+     * EvaluatorModelFactory.
      */
     public function assigned(?string $evaluatorId = null): static
     {
         return $this->state(fn (array $attributes) => [
             'status' => CandidacyStatus::ASSIGNED->value,
             'evaluator_id' => $evaluatorId ?? EvaluatorModelFactory::new()->create()->id,
-            'assigned_at' => now(),
         ])->afterCreating(function (CandidacyModel $candidacy) {
+            $decidedAt = $this->backdateAndLogValidation($candidacy, CandidacyStatus::VALIDATED, []);
+
+            $assignedAt = $decidedAt->copy()->addHours(fake()->numberBetween(4, 48));
+
+            $candidacy->forceFill(['assigned_at' => $assignedAt])->save();
+
             ActivityLogModel::query()->create([
                 'id' => (string) Str::uuid7(),
                 'candidacy_id' => $candidacy->id,
                 'evaluator_id' => $candidacy->evaluator_id,
                 'action' => 'evaluator_assigned',
                 'payload' => ['evaluator_id' => $candidacy->evaluator_id],
-                'occurred_at' => $candidacy->assigned_at,
+                'occurred_at' => $assignedAt,
             ]);
         });
     }
@@ -115,13 +124,19 @@ class CandidacyModelFactory extends Factory
      * forceFill, since timestamps aren't mass-assignable) and writes the
      * activity_log entry for the given outcome at a realistic point between
      * created_at and now, so time_to_decision has a meaningful, non-zero
-     * value to compute.
+     * value to compute. Returns the decision timestamp so callers that build
+     * on top of it (e.g. assigned()) can sequence their own timestamps after
+     * it.
      *
      * @param  list<string>  $reasons
      */
-    private function backdateAndLogValidation(CandidacyModel $candidacy, CandidacyStatus $outcome, array $reasons): void
+    private function backdateAndLogValidation(CandidacyModel $candidacy, CandidacyStatus $outcome, array $reasons): Carbon
     {
-        $registeredAt = now()->subDays(fake()->numberBetween(3, 14));
+        // Registration is pushed back far enough (6-20 days) that even the
+        // latest possible decision (+3 days) and, for assigned(), the latest
+        // possible assignment after that (+48 hours) both still land safely
+        // before "now" — timestamps must never appear to be in the future.
+        $registeredAt = now()->subDays(fake()->numberBetween(6, 20));
         $decidedAt = $registeredAt->copy()->addDays(fake()->numberBetween(1, 3));
 
         $candidacy->forceFill(['created_at' => $registeredAt])->save();
@@ -137,5 +152,7 @@ class CandidacyModelFactory extends Factory
             ],
             'occurred_at' => $decidedAt,
         ]);
+
+        return $decidedAt;
     }
 }

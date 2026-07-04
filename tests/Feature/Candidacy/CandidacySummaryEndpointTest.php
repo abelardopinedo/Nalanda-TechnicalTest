@@ -113,6 +113,21 @@ class CandidacySummaryEndpointTest extends TestCase
         $this->assertGreaterThan(0, $timeToDecision);
     }
 
+    public function test_summary_populates_time_to_decision_for_a_candidacy_built_from_the_assigned_factory_state(): void
+    {
+        $candidacy = CandidacyModel::factory()->eligible()->assigned()->create();
+
+        $response = $this->getJson("/api/v1/candidacies/{$candidacy->id}/summary");
+
+        $response->assertOk();
+        $response->assertJsonPath('data.status', 'assigned');
+        $response->assertJsonPath('data.validation.outcome', 'validated');
+        $this->assertNotNull($response->json('data.evaluator.assigned_at'));
+        $timeToDecision = $response->json('data.derived.time_to_decision_days');
+        $this->assertNotNull($timeToDecision);
+        $this->assertGreaterThan(0, $timeToDecision);
+    }
+
     public function test_it_returns_404_for_an_unknown_candidacy(): void
     {
         $response = $this->getJson('/api/v1/candidacies/missing-id/summary');
