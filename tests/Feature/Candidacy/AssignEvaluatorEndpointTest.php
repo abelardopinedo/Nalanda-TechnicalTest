@@ -81,6 +81,18 @@ class AssignEvaluatorEndpointTest extends TestCase
         $response->assertStatus(409);
     }
 
+    public function test_it_returns_a_conflict_when_the_candidacy_was_rejected(): void
+    {
+        $evaluatorId = $this->createEvaluator();
+        $candidacyId = $this->createRejectedCandidacy();
+
+        $response = $this->postJson("/api/v1/candidacies/{$candidacyId}/evaluator", [
+            'evaluator_id' => $evaluatorId,
+        ]);
+
+        $response->assertStatus(409);
+    }
+
     private function createEvaluator(): string
     {
         $evaluator = EvaluatorModel::query()->create([
@@ -108,6 +120,17 @@ class AssignEvaluatorEndpointTest extends TestCase
         $repository = new EloquentCandidacyRepository(new CandidacyMapper());
 
         $candidacy = $this->registerCandidacy($repository);
+        $repository->save($candidacy);
+
+        return $candidacy->id();
+    }
+
+    private function createRejectedCandidacy(): string
+    {
+        $repository = new EloquentCandidacyRepository(new CandidacyMapper());
+
+        $candidacy = $this->registerCandidacy($repository);
+        $candidacy->reject();
         $repository->save($candidacy);
 
         return $candidacy->id();
