@@ -14,8 +14,8 @@ use Candidacy\Domain\Candidacy;
 use Candidacy\Domain\CandidacyStatus;
 use Candidacy\Domain\CvText;
 use Candidacy\Domain\Email;
+use Candidacy\Domain\Exception\InvalidCandidacyStatusTransition;
 use Candidacy\Domain\YearsOfExperience;
-use DomainException;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\InMemoryTransactionManager;
 
@@ -91,7 +91,7 @@ class ValidateCandidacyTest extends TestCase
             new InMemoryTransactionManager(),
         );
 
-        $this->expectException(DomainException::class);
+        $this->expectException(InvalidCandidacyStatusTransition::class);
 
         $useCase(new ValidateCandidacyCommand('candidacy-3'));
     }

@@ -2,7 +2,7 @@
 
 namespace Candidacy\Domain;
 
-use DomainException;
+use Candidacy\Domain\Exception\InvalidCandidacyStatusTransition;
 
 enum CandidacyStatus: string
 {
@@ -31,9 +31,7 @@ enum CandidacyStatus: string
     public function guardTransitionTo(self $target): void
     {
         if (! $this->canTransitionTo($target)) {
-            throw new DomainException(
-                "Cannot transition candidacy status from {$this->value} to {$target->value}."
-            );
+            throw InvalidCandidacyStatusTransition::from($this, $target);
         }
     }
 }

@@ -2,6 +2,7 @@
 
 use Candidacy\Application\Exception\CandidacyNotFoundException;
 use Candidacy\Application\Exception\CandidacyValidationException;
+use Candidacy\Domain\Exception\InvalidCandidacyStatusTransition;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -32,7 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'message' => $e->getMessage(),
         ], 404));
 
-        $exceptions->render(fn (\DomainException $e) => response()->json([
+        $exceptions->render(fn (InvalidCandidacyStatusTransition $e) => response()->json([
             'message' => $e->getMessage(),
         ], 409));
     })->create();

@@ -3,7 +3,7 @@
 namespace Tests\Unit\Candidacy;
 
 use Candidacy\Domain\CandidacyStatus;
-use DomainException;
+use Candidacy\Domain\Exception\InvalidCandidacyStatusTransition;
 use PHPUnit\Framework\TestCase;
 
 class CandidacyStatusTest extends TestCase
@@ -21,7 +21,8 @@ class CandidacyStatusTest extends TestCase
 
     public function test_guard_throws_on_an_illegal_transition(): void
     {
-        $this->expectException(DomainException::class);
+        $this->expectException(InvalidCandidacyStatusTransition::class);
+        $this->expectExceptionMessage('Cannot transition candidacy status from received to assigned.');
 
         CandidacyStatus::RECEIVED->guardTransitionTo(CandidacyStatus::ASSIGNED);
     }

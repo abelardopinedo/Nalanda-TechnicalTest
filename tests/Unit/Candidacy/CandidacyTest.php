@@ -9,8 +9,8 @@ use Candidacy\Domain\Email;
 use Candidacy\Domain\Event\CandidacyRegistered;
 use Candidacy\Domain\Event\CandidacyValidated;
 use Candidacy\Domain\Event\EvaluatorAssigned;
+use Candidacy\Domain\Exception\InvalidCandidacyStatusTransition;
 use Candidacy\Domain\YearsOfExperience;
-use DomainException;
 use PHPUnit\Framework\TestCase;
 
 class CandidacyTest extends TestCase
@@ -122,7 +122,7 @@ class CandidacyTest extends TestCase
         $candidacy = $this->registerCandidacy();
         $candidacy->reject();
 
-        $this->expectException(DomainException::class);
+        $this->expectException(InvalidCandidacyStatusTransition::class);
 
         $candidacy->assignEvaluator('evaluator-1');
     }
@@ -131,7 +131,7 @@ class CandidacyTest extends TestCase
     {
         $candidacy = $this->registerCandidacy();
 
-        $this->expectException(DomainException::class);
+        $this->expectException(InvalidCandidacyStatusTransition::class);
 
         $candidacy->assignEvaluator('evaluator-1');
     }
