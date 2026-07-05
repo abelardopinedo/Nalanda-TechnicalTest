@@ -12,12 +12,15 @@ use Candidacy\Domain\CvText;
 use Candidacy\Domain\Email;
 use Candidacy\Domain\YearsOfExperience;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Str;
+use Tests\Support\ClearsCandidacyReadCache;
 use Tests\TestCase;
 
 class AssignEvaluatorEndpointTest extends TestCase
 {
     use RefreshDatabase;
+    use ClearsCandidacyReadCache;
 
     public function test_it_assigns_an_evaluator_to_a_validated_candidacy_and_logs_the_event(): void
     {
@@ -91,6 +94,113 @@ class AssignEvaluatorEndpointTest extends TestCase
         ]);
 
         $response->assertStatus(409);
+    }
+
+    public function test_replaying_the_same_idempotency_key_returns_the_prior_result_without_a_second_assignment(): void
+    {
+        $alice = $this->createEvaluator();
+        $bob = $this->createEvaluator();
+        $candidacyId = $this->createValidatedCandidacy();
+
+        $first = $this->postJson("/api/v1/candidacies/{$candidacyId}/evaluator", [
+            'evaluator_id' => $alice,
+        ], ['Idempotency-Key' => 'replay-key-1']);
+        $first->assertOk();
+        $first->assertJsonPath('data.evaluator_id', $alice);
+
+        // Same key, different evaluator: must replay the first result
+        // verbatim rather than attempting (and rejecting) a real second
+        // assignment.
+        $second = $this->postJson("/api/v1/candidacies/{$candidacyId}/evaluator", [
+            'evaluator_id' => $bob,
+        ], ['Idempotency-Key' => 'replay-key-1']);
+        $second->assertOk();
+        $second->assertJsonPath('data.evaluator_id', $alice);
+        $this->assertSame($first->json(), $second->json());
+
+        $this->assertDatabaseHas(CandidacyModel::class, [
+            'id' => $candidacyId,
+            'status' => 'assigned',
+            'evaluator_id' => $alice,
+        ]);
+        $this->assertSame(1, ActivityLogModel::query()
+            ->where('candidacy_id', $candidacyId)
+            ->where('action', 'evaluator_assigned')
+            ->count());
+    }
+
+    public function test_a_different_idempotency_key_performs_an_independent_assignment(): void
+    {
+        $alice = $this->createEvaluator();
+        $bob = $this->createEvaluator();
+        $candidacyOne = $this->createValidatedCandidacy();
+        $candidacyTwo = $this->createValidatedCandidacy();
+
+        $first = $this->postJson("/api/v1/candidacies/{$candidacyOne}/evaluator", [
+            'evaluator_id' => $alice,
+        ], ['Idempotency-Key' => 'key-one']);
+        $first->assertOk();
+        $first->assertJsonPath('data.evaluator_id', $alice);
+
+        $second = $this->postJson("/api/v1/candidacies/{$candidacyTwo}/evaluator", [
+            'evaluator_id' => $bob,
+        ], ['Idempotency-Key' => 'key-two']);
+        $second->assertOk();
+        $second->assertJsonPath('data.evaluator_id', $bob);
+
+        $this->assertDatabaseHas(CandidacyModel::class, ['id' => $candidacyOne, 'evaluator_id' => $alice]);
+        $this->assertDatabaseHas(CandidacyModel::class, ['id' => $candidacyTwo, 'evaluator_id' => $bob]);
+        $this->assertSame(2, ActivityLogModel::query()->where('action', 'evaluator_assigned')->count());
+    }
+
+    public function test_no_idempotency_key_performs_a_normal_non_idempotent_assignment(): void
+    {
+        $alice = $this->createEvaluator();
+        $candidacyId = $this->createValidatedCandidacy();
+
+        $response = $this->postJson("/api/v1/candidacies/{$candidacyId}/evaluator", [
+            'evaluator_id' => $alice,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.evaluator_id', $alice);
+        $this->assertSame(1, ActivityLogModel::query()
+            ->where('candidacy_id', $candidacyId)
+            ->where('action', 'evaluator_assigned')
+            ->count());
+    }
+
+    public function test_after_the_ttl_window_the_same_idempotency_key_is_treated_as_new(): void
+    {
+        Config::set('cache.assignment_idempotency_ttl', 1);
+
+        $alice = $this->createEvaluator();
+        $bob = $this->createEvaluator();
+        $candidacyOne = $this->createValidatedCandidacy();
+        $candidacyTwo = $this->createValidatedCandidacy();
+
+        $first = $this->postJson("/api/v1/candidacies/{$candidacyOne}/evaluator", [
+            'evaluator_id' => $alice,
+        ], ['Idempotency-Key' => 'expiring-key']);
+        $first->assertOk();
+        $first->assertJsonPath('data.evaluator_id', $alice);
+
+        // Real Redis TTL expiry runs on the server's own clock, not
+        // Carbon::setTestNow(), so this must actually wait it out.
+        usleep(1_200_000);
+
+        // Same key, but the entry has expired: this must be treated as a
+        // brand new request and perform a real assignment for candidacyTwo,
+        // not replay candidacyOne's cached result.
+        $second = $this->postJson("/api/v1/candidacies/{$candidacyTwo}/evaluator", [
+            'evaluator_id' => $bob,
+        ], ['Idempotency-Key' => 'expiring-key']);
+        $second->assertOk();
+        $second->assertJsonPath('data.evaluator_id', $bob);
+        $second->assertJsonPath('data.id', $candidacyTwo);
+
+        $this->assertDatabaseHas(CandidacyModel::class, ['id' => $candidacyTwo, 'evaluator_id' => $bob]);
+        $this->assertSame(2, ActivityLogModel::query()->where('action', 'evaluator_assigned')->count());
     }
 
     private function createEvaluator(): string

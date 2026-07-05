@@ -25,4 +25,15 @@ class AssignEvaluatorRequest extends FormRequest
             'evaluator_id' => ['required', 'string', 'exists:evaluators,id'],
         ];
     }
+
+    /**
+     * Optional client-supplied replay key: idempotency is opt-in, only
+     * applied when this header is present.
+     */
+    public function idempotencyKey(): ?string
+    {
+        $key = $this->header('Idempotency-Key');
+
+        return $key !== null && $key !== '' ? $key : null;
+    }
 }

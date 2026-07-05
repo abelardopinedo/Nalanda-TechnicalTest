@@ -133,4 +133,18 @@ return [
 
     'serializable_classes' => false,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Assignment idempotency TTL
+    |--------------------------------------------------------------------------
+    |
+    | How long a replayed Idempotency-Key on the evaluator assignment
+    | endpoint keeps returning the original result, in seconds. Configurable
+    | (rather than a hardcoded constant) so tests can use a short-lived
+    | window to exercise real Redis expiry without waiting 24 hours.
+    |
+    */
+
+    'assignment_idempotency_ttl' => env('ASSIGNMENT_IDEMPOTENCY_TTL', 60 * 60 * 24),
+
 ];
