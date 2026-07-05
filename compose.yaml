@@ -27,8 +27,37 @@ services:
         networks:
             - sail
         depends_on:
-            - mysql
-            - redis
+            mysql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+            migrate:
+                condition: service_completed_successfully
+    migrate:
+        image: 'sail-8.3/app'
+        environment:
+            WWWUSER: '${WWWUSER:-1337}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            mysql:
+                condition: service_healthy
+        # `migrate` (not `migrate:fresh`): idempotent, only applies pending
+        # migrations, safe to run on every `docker compose up` without
+        # wiping data on a restart. This is a one-shot job, not a
+        # long-running service — it's expected to exit 0 and stop; the
+        # other services wait on that via `service_completed_successfully`
+        # instead of racing the schema.
+        #
+        # db:seed (DatabaseSeeder: EvaluatorSeeder + CandidacySeeder — 3
+        # evaluadores, una candidatura por etapa) is NOT idempotent the way
+        # migrate is: CandidacySeeder inserts fresh rows every call, so
+        # re-running `docker compose up` after data already exists will add
+        # duplicate sample candidacies rather than a clean no-op.
+        command: sh -c "php artisan migrate --force && php artisan db:seed --force"
     queue:
         build:
             context: './docker/8.3'
@@ -60,6 +89,8 @@ services:
                 condition: service_healthy
             redis:
                 condition: service_healthy
+            migrate:
+                condition: service_completed_successfully
         restart: unless-stopped
         # QUEUE_CONNECTION=database: report generation and its follow-up
         # notification mail are dispatched to the `jobs` table and sit there

@@ -367,32 +367,42 @@ a propósito: si `compose.yaml` dependiera de rutas dentro de `vendor/`, el prim
 contexto de build antes de poder correr `composer install`. Con esto, estos tres comandos
 alcanzan, sin pasos previos.
 
-`docker compose up -d` levanta los cuatro servicios de `compose.yaml`: `laravel.test` (la app),
+`docker compose up -d` levanta cinco servicios de `compose.yaml`: `migrate` (corre
+`php artisan migrate --force && php artisan db:seed --force` y termina — el resto espera a que
+termine bien vía `service_completed_successfully` antes de arrancar), `laravel.test` (la app),
 `queue` (worker de colas, `php artisan queue:work` con `restart: unless-stopped` — necesario para
 la generación de reportes ya que `QUEUE_CONNECTION=database`, arranca solo), `mysql` y `redis`.
+La migración y el seed por defecto (`DatabaseSeeder`: `EvaluatorSeeder` — 3 evaluadores — +
+`CandidacySeeder` — una candidatura por etapa: received/validated/assigned/rejected) ya quedan
+listos solos, sin ningún paso manual.
 
-Después, para migrar/poblar/testear (`<container>` = nombre del servicio de la app, ver
-`docker ps`, por defecto `<carpeta>-laravel.test-1`):
+Después (`<container>` = nombre del servicio de la app, ver `docker ps`, por defecto
+`<carpeta>-laravel.test-1`):
 
 ```bash
 docker exec <container> php artisan key:generate
-docker exec <container> php artisan migrate:fresh --seed
 docker exec <container> php artisan test
 ```
 
-En local, `MAIL_MAILER=log`: los emails de notificación de reportes (listos/fallidos) no se
-envían de verdad, quedan escritos en `storage/logs/laravel.log`. Para verlos renderizados en una
-UI, apunta `MAIL_MAILER` a Mailpit/Mailhog u otro proveedor SMTP local.
+### Cambiar el seed
 
-Seeders masivos para verificar manualmente el reporte Excel y la asignación masiva a escala
-(50+ filas por hoja, distintos escenarios de estado):
+`migrate` corre el seed por defecto (`DatabaseSeeder`) en cada `docker compose up` —
+`EvaluatorSeeder` es idempotente (`firstOrCreate`), pero `CandidacySeeder` no: correrlo de nuevo
+agrega candidaturas de muestra duplicadas en vez de no hacer nada. Para probar otro escenario,
+resetea la base y corre el seeder que quieras a mano:
 
 ```bash
+docker exec <container> php artisan migrate:fresh          # sin --seed: deja las tablas vacías
+docker exec <container> php artisan db:seed                # vuelve a correr el seed por defecto
 docker exec <container> php artisan db:seed --class=BulkReportReceivedSeeder             # 5 evaluadores + 120 RECEIVED
 docker exec <container> php artisan db:seed --class=BulkReportValidatedRejectedSeeder     # 5 evaluadores + 60 VALIDATED + 60 REJECTED
 docker exec <container> php artisan db:seed --class=BulkReportSingleEvaluatorSeeder       # 1 evaluador + 51 candidatos
 docker exec <container> php artisan db:seed --class=BulkReportSingleEvaluatorFullSheetSeeder
 ```
+
+En local, `MAIL_MAILER=log`: los emails de notificación de reportes (listos/fallidos) no se
+envían de verdad, quedan escritos en `storage/logs/laravel.log`. Para verlos renderizados en una
+UI, apunta `MAIL_MAILER` a Mailpit/Mailhog u otro proveedor SMTP local.
 
 ## Documentación de la API
 
