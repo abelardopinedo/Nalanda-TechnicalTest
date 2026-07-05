@@ -1,0 +1,927 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Laravel",
+        "version": "0.0.1",
+        "description": "Recruiting API for candidacy registration, validation, evaluator assignment (single and bulk), the consolidated candidacy/evaluator listing, candidacy summaries, and asynchronous Excel report generation."
+    },
+    "servers": [
+        {
+            "url": "http://localhost/api/v1"
+        }
+    ],
+    "paths": {
+        "/candidacies/{candidacy}/evaluator": {
+            "post": {
+                "operationId": "v1.assignEvaluator",
+                "tags": [
+                    "AssignEvaluator"
+                ],
+                "parameters": [
+                    {
+                        "name": "candidacy",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssignEvaluatorRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/evaluators/{evaluator}/assign-bulk": {
+            "post": {
+                "operationId": "v1.bulkAssignEvaluator",
+                "tags": [
+                    "BulkAssignEvaluator"
+                ],
+                "parameters": [
+                    {
+                        "name": "evaluator",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkAssignEvaluatorRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/candidacies": {
+            "get": {
+                "operationId": "v1.candidacyEvaluatorListing",
+                "tags": [
+                    "CandidacyEvaluatorListing"
+                ],
+                "parameters": [
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "candidate_name",
+                                "candidate_email",
+                                "years",
+                                "evaluator_name",
+                                "assigned_at"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "direction",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "years_of_experience_min",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "years_of_experience_max",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `CandidacyEvaluatorListingResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CandidacyEvaluatorListingResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1.registerCandidacy",
+                "tags": [
+                    "RegisterCandidacy"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterCandidacyRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`CandidacyResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CandidacyResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/candidacies/{candidacy}/summary": {
+            "get": {
+                "operationId": "v1.candidacySummary",
+                "tags": [
+                    "CandidacySummary"
+                ],
+                "parameters": [
+                    {
+                        "name": "candidacy",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`CandidacySummaryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CandidacySummaryResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports": {
+            "post": {
+                "operationId": "v1.generateReport",
+                "tags": [
+                    "GenerateReport"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateReportRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "report_id": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "report_id",
+                                                "status"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "report_id": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "file_path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "download_url": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "report_id",
+                                                "status",
+                                                "file_path",
+                                                "download_url"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "report_id": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "error_message": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "report_id",
+                                                "status",
+                                                "error_message"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "anyOf": [
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "report_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "status": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "report_id",
+                                                        "status"
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "report_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "status": {
+                                                            "type": "string"
+                                                        },
+                                                        "file_path": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "download_url": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "report_id",
+                                                        "status",
+                                                        "file_path",
+                                                        "download_url"
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "report_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "status": {
+                                                            "type": "string"
+                                                        },
+                                                        "error_message": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "report_id",
+                                                        "status",
+                                                        "error_message"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/reports/{report}": {
+            "get": {
+                "operationId": "v1.showReport",
+                "tags": [
+                    "ShowReport"
+                ],
+                "parameters": [
+                    {
+                        "name": "report",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/candidacies/{candidacy}/validate": {
+            "post": {
+                "operationId": "v1.validateCandidacy",
+                "tags": [
+                    "ValidateCandidacy"
+                ],
+                "parameters": [
+                    {
+                        "name": "candidacy",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ValidationReportResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationReportResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "AssignEvaluatorRequest": {
+                "type": "object",
+                "description": "HTTP-level input guarding only: shape, presence, and referential existence\nof the evaluator. The candidacy's own eligibility for assignment (status\ntransition rules) is enforced by the domain, not this request.",
+                "properties": {
+                    "evaluator_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "evaluator_id"
+                ],
+                "title": "AssignEvaluatorRequest"
+            },
+            "BulkAssignEvaluatorRequest": {
+                "type": "object",
+                "description": "HTTP-level input guarding only: shape and presence of the candidacy id\nlist. Deliberately does NOT validate that each id refers to an existing\n(or VALIDATED) candidacy \u2014 unknown/ineligible ids are reported back as\nskipped rather than rejecting the whole batch with a 422.",
+                "properties": {
+                    "candidacy_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 1
+                    }
+                },
+                "required": [
+                    "candidacy_ids"
+                ],
+                "title": "BulkAssignEvaluatorRequest"
+            },
+            "CandidacyEvaluatorListingResource": {
+                "type": "object",
+                "properties": {
+                    "candidacy_id": {
+                        "type": "string"
+                    },
+                    "candidate_name": {
+                        "type": "string"
+                    },
+                    "candidate_email": {
+                        "type": "string"
+                    },
+                    "years_of_experience": {
+                        "type": "integer"
+                    },
+                    "evaluator_id": {
+                        "type": "string"
+                    },
+                    "evaluator_name": {
+                        "type": "string"
+                    },
+                    "assigned_at": {
+                        "type": "string"
+                    },
+                    "evaluator_total_assigned": {
+                        "type": "string"
+                    },
+                    "evaluator_candidate_emails": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "candidacy_id",
+                    "candidate_name",
+                    "candidate_email",
+                    "years_of_experience",
+                    "evaluator_id",
+                    "evaluator_name",
+                    "assigned_at",
+                    "evaluator_total_assigned",
+                    "evaluator_candidate_emails"
+                ],
+                "title": "CandidacyEvaluatorListingResource"
+            },
+            "CandidacyResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "full_name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "years_of_experience": {
+                        "type": "integer"
+                    },
+                    "cv_text": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "evaluator_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "assigned_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "full_name",
+                    "email",
+                    "years_of_experience",
+                    "cv_text",
+                    "status",
+                    "evaluator_id",
+                    "assigned_at"
+                ],
+                "title": "CandidacyResource"
+            },
+            "CandidacySummaryResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "full_name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "years_of_experience": {
+                        "type": "integer"
+                    },
+                    "cv_text": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "evaluator": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "assigned_at": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "assigned_at"
+                        ]
+                    },
+                    "validation": {
+                        "type": "object",
+                        "properties": {
+                            "evaluated": {
+                                "type": "boolean"
+                            },
+                            "outcome": {
+                                "type": "string"
+                            },
+                            "passed": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "evaluated_at": {
+                                "type": "string"
+                            },
+                            "failed_reasons": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "evaluated",
+                            "outcome",
+                            "passed",
+                            "evaluated_at",
+                            "failed_reasons"
+                        ]
+                    },
+                    "derived": {
+                        "type": "object",
+                        "properties": {
+                            "days_since_registration": {
+                                "type": "number"
+                            },
+                            "time_to_decision_days": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "experience_tier": {
+                                "type": "string",
+                                "enum": [
+                                    "Senior",
+                                    "Mid",
+                                    "Junior"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "days_since_registration",
+                            "time_to_decision_days",
+                            "experience_tier"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "full_name",
+                    "email",
+                    "years_of_experience",
+                    "cv_text",
+                    "status",
+                    "created_at",
+                    "evaluator",
+                    "validation",
+                    "derived"
+                ],
+                "title": "CandidacySummaryResource"
+            },
+            "GenerateReportRequest": {
+                "type": "object",
+                "description": "Accepts the same `filter[field]=value` shape (plus the\nyears_of_experience_min/years_of_experience_max range params) as\nCandidacyEvaluatorListingRequest, validated against the exact same\nwhitelist (CandidacyEvaluatorListingQuery::FIELDS) \u2014 so the report export\ncan be scoped to the same subset of the consolidated listing a client\nalready sees via GET /candidacies.",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "years_of_experience_min": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 0
+                    },
+                    "years_of_experience_max": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 0
+                    },
+                    "filter": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "email"
+                ],
+                "title": "GenerateReportRequest"
+            },
+            "RegisterCandidacyRequest": {
+                "type": "object",
+                "description": "HTTP-level input guarding only: shape and presence of the payload.\nBusiness rules (disposable emails, minimum experience, CV quality, ...)\nare the domain's ValidationChain's responsibility, not this request's.",
+                "properties": {
+                    "full_name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "years_of_experience": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "cv_text": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "full_name",
+                    "email",
+                    "years_of_experience",
+                    "cv_text"
+                ],
+                "title": "RegisterCandidacyRequest"
+            },
+            "ValidationReportResource": {
+                "type": "object",
+                "properties": {
+                    "isValid": {
+                        "type": "boolean"
+                    },
+                    "passed": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "failed": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "isValid",
+                    "passed",
+                    "failed"
+                ],
+                "title": "ValidationReportResource"
+            }
+        },
+        "responses": {
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Errors overview."
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "A detailed description of each field that failed validation.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "message",
+                                "errors"
+                            ]
+                        }
+                    }
+                }
+            },
+            "ModelNotFoundException": {
+                "description": "Not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
