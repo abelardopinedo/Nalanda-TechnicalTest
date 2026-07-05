@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\Providers;
 
+use App\Listeners\InvalidateCandidacyReadCache;
 use App\Listeners\WriteDomainEventToActivityLog;
 use Candidacy\Domain\Event\CandidacyRegistered;
 use Candidacy\Domain\Event\CandidacyValidated;
@@ -16,5 +17,9 @@ class EventServiceProvider extends ServiceProvider
         Event::listen(CandidacyRegistered::class, WriteDomainEventToActivityLog::class);
         Event::listen(EvaluatorAssigned::class, WriteDomainEventToActivityLog::class);
         Event::listen(CandidacyValidated::class, WriteDomainEventToActivityLog::class);
+
+        Event::listen(CandidacyRegistered::class, InvalidateCandidacyReadCache::class);
+        Event::listen(EvaluatorAssigned::class, InvalidateCandidacyReadCache::class);
+        Event::listen(CandidacyValidated::class, InvalidateCandidacyReadCache::class);
     }
 }

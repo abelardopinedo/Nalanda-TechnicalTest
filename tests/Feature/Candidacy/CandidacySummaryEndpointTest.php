@@ -13,11 +13,13 @@ use Candidacy\Domain\Email;
 use Candidacy\Domain\YearsOfExperience;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\ClearsCandidacyReadCache;
 use Tests\TestCase;
 
 class CandidacySummaryEndpointTest extends TestCase
 {
     use RefreshDatabase;
+    use ClearsCandidacyReadCache;
 
     public function test_summary_for_a_received_candidacy_shows_not_yet_evaluated_and_runs_no_chain(): void
     {
@@ -133,6 +135,30 @@ class CandidacySummaryEndpointTest extends TestCase
         $response = $this->getJson('/api/v1/candidacies/missing-id/summary');
 
         $response->assertStatus(404);
+    }
+
+    public function test_it_exposes_an_x_cache_header_reflecting_hit_and_miss(): void
+    {
+        $candidacyId = $this->createValidatedCandidacy();
+
+        $first = $this->getJson("/api/v1/candidacies/{$candidacyId}/summary");
+        $first->assertOk();
+        $first->assertHeader('X-Cache', 'MISS');
+
+        $second = $this->getJson("/api/v1/candidacies/{$candidacyId}/summary");
+        $second->assertOk();
+        $second->assertHeader('X-Cache', 'HIT');
+
+        // Assigning an evaluator invalidates this candidacy's cached summary.
+        $evaluator = EvaluatorModel::factory()->create();
+        $repository = new EloquentCandidacyRepository(new CandidacyMapper());
+        $candidacy = $repository->findById($candidacyId);
+        $candidacy->assignEvaluator($evaluator->id);
+        $repository->save($candidacy);
+
+        $third = $this->getJson("/api/v1/candidacies/{$candidacyId}/summary");
+        $third->assertOk();
+        $third->assertHeader('X-Cache', 'MISS');
     }
 
     #[DataProvider('experienceTierBoundaries')]

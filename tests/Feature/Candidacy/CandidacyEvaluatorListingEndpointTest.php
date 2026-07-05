@@ -11,11 +11,13 @@ use Candidacy\Domain\Email;
 use Candidacy\Domain\YearsOfExperience;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Tests\Support\ClearsCandidacyReadCache;
 use Tests\TestCase;
 
 class CandidacyEvaluatorListingEndpointTest extends TestCase
 {
     use RefreshDatabase;
+    use ClearsCandidacyReadCache;
 
     public function test_it_sorts_by_years_descending_by_default(): void
     {
@@ -179,6 +181,31 @@ class CandidacyEvaluatorListingEndpointTest extends TestCase
         // Default sort is years desc: page 1 holds [5, 4], page 2 holds [3, 2].
         $response->assertJsonPath('data.0.years_of_experience', 3);
         $response->assertJsonPath('data.1.years_of_experience', 2);
+    }
+
+    public function test_it_exposes_an_x_cache_header_reflecting_hit_and_miss(): void
+    {
+        $alice = $this->createEvaluator('Alice Reviewer');
+        $this->assignCandidacy($alice, 'Candidate One', 'one@example.com', 4);
+
+        $query = '/api/v1/candidacies?'.http_build_query([
+            'filter' => ['evaluator_name' => 'Alice Reviewer'],
+        ]);
+
+        $first = $this->getJson($query);
+        $first->assertOk();
+        $first->assertHeader('X-Cache', 'MISS');
+
+        $second = $this->getJson($query);
+        $second->assertOk();
+        $second->assertHeader('X-Cache', 'HIT');
+
+        // A new assignment to the same evaluator invalidates this cached page.
+        $this->assignCandidacy($alice, 'Candidate Two', 'two@example.com', 5);
+
+        $third = $this->getJson($query);
+        $third->assertOk();
+        $third->assertHeader('X-Cache', 'MISS');
     }
 
     private function createEvaluator(string $name): string

@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CandidacySummaryResource;
-use App\Infrastructure\Query\CandidacySummaryQuery;
+use App\Infrastructure\Cache\CachedCandidacySummaryQuery;
 use Candidacy\Application\Exception\CandidacyNotFoundException;
 use Illuminate\Http\JsonResponse;
 
 class CandidacySummaryController extends Controller
 {
-    public function __invoke(string $candidacy, CandidacySummaryQuery $query): JsonResponse
+    public function __invoke(string $candidacy, CachedCandidacySummaryQuery $query): JsonResponse
     {
         $summary = $query->forCandidacy($candidacy);
 
@@ -18,6 +18,8 @@ class CandidacySummaryController extends Controller
             throw new CandidacyNotFoundException($candidacy);
         }
 
-        return CandidacySummaryResource::make($summary)->response();
+        return CandidacySummaryResource::make($summary)
+            ->response()
+            ->header('X-Cache', $query->lastOutcomeWasHit() ? 'HIT' : 'MISS');
     }
 }
