@@ -356,7 +356,7 @@ candidaturas no `VALIDATED` (o inexistentes) en un lote se omiten y se reportan 
 
 ```bash
 cp .env.example .env
-docker compose run --rm laravel.test composer install --ignore-platform-reqs
+docker compose run --rm --no-deps laravel.test composer install --ignore-platform-reqs
 docker compose up -d
 ```
 
@@ -366,6 +366,11 @@ a propósito: si `compose.yaml` dependiera de rutas dentro de `vendor/`, el prim
 `docker compose run`/`up` en un clon nuevo (sin `vendor/` todavía) fallaría al no encontrar el
 contexto de build antes de poder correr `composer install`. Con esto, estos tres comandos
 alcanzan, sin pasos previos.
+
+`--no-deps` es necesario: `laravel.test` depende de `migrate` (ver abajo), y `migrate` en sí
+necesita `vendor/` para poder correr — sin `--no-deps`, este `composer install` intentaría
+levantar `migrate` primero, que fallaría (todavía no existe `vendor/`), bloqueando el propio
+`composer install` que lo crearía.
 
 `docker compose up -d` levanta cinco servicios de `compose.yaml`: `migrate` (corre
 `php artisan migrate --force && php artisan db:seed --force` y termina — el resto espera a que
