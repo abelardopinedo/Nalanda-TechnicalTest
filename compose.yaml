@@ -24,6 +24,44 @@ services:
         depends_on:
             - mysql
             - redis
+    queue:
+        build:
+            context: './vendor/laravel/sail/runtimes/8.3'
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP:-1000}'
+        image: 'sail-8.3/app'
+        environment:
+            # Defaulted (unlike laravel.test's plain ${WWWUSER}): this
+            # service passes a `command:`, so start-container's entrypoint
+            # takes its `exec gosu $WWWUSER "$@"` branch — an empty/unset
+            # WWWUSER there makes gosu treat the first word of the command
+            # ("php") as the username to switch to and fail. laravel.test
+            # never hits that branch (no command override), so it never
+            # needed a fallback. 1337 (not 1000) matches the `sail` user's
+            # UID baked into the Sail Dockerfile itself (`useradd -u 1337
+            # sail`), which is what actually owns storage/ and
+            # bootstrap/cache/ on this host — a generic 1000 default would
+            # usermod this container's sail to a different, mismatched uid
+            # and get Permission denied writing to storage/.
+            WWWUSER: '${WWWUSER:-1337}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            mysql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        restart: unless-stopped
+        # QUEUE_CONNECTION=database: report generation and its follow-up
+        # notification mail are dispatched to the `jobs` table and sit there
+        # until a worker picks them up — nothing processes them without this
+        # service. Runs automatically with `docker compose up` / `sail up`,
+        # no manual `artisan queue:work` needed anymore.
+        command: php artisan queue:work --tries=3 --backoff=3 --sleep=3
     mysql:
         image: 'mysql:8.4'
         ports:

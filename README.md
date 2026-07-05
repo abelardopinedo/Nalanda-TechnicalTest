@@ -330,9 +330,11 @@ candidaturas no `VALIDATED` (o inexistentes) en un lote se omiten y se reportan 
   con `lockForUpdate`. Ver [Decisiones de alcance](#decisiones-de-alcance) para el detalle de por
   qué no hace falta una restricción única adicional.
 - **Colas** — la generación del reporte Excel corre en cola (`ShouldQueue`, conexión
-  `database` — requiere un worker real, ver [Cómo ejecutar el proyecto](#cómo-ejecutar-el-proyecto)),
-  notificando por email solo después de confirmar que el archivo fue escrito (evitando una
-  condición de carrera donde el email podría llegar antes de que el reporte exista).
+  `database`), notificando por email solo después de confirmar que el archivo fue escrito
+  (evitando una condición de carrera donde el email podría llegar antes de que el reporte
+  exista). El worker corre como su propio servicio (`queue`) en `compose.yaml`, arriba
+  automáticamente junto al resto del stack — ver
+  [Cómo ejecutar el proyecto](#cómo-ejecutar-el-proyecto).
 
 ## Testing
 
@@ -353,20 +355,21 @@ candidaturas no `VALIDATED` (o inexistentes) en un lote se omiten y se reportan 
 ## Cómo ejecutar el proyecto
 
 ```bash
-# levantar el stack (app, MySQL, Redis)
-sail up -d
+docker compose up -d
+```
 
-# instalar dependencias (primera vez)
-sail composer install
+Ese único comando levanta los cuatro servicios de `compose.yaml`: `laravel.test` (la app),
+`queue` (worker de colas, `php artisan queue:work` con `restart: unless-stopped` — necesario para
+la generación de reportes ya que `QUEUE_CONNECTION=database`, arranca solo, sin paso manual
+adicional), `mysql` y `redis`.
 
-# migrar + poblar
-sail artisan migrate:fresh --seed
+Primera vez / mantenimiento (`<container>` es el nombre del servicio de la app —
+`docker ps` para confirmarlo, por defecto `<carpeta>-laravel.test-1`):
 
-# correr la suite de tests
-sail artisan test
-
-# worker de colas (necesario para la generación de reportes, QUEUE_CONNECTION=database)
-sail artisan queue:work
+```bash
+docker exec <container> composer install
+docker exec <container> php artisan migrate:fresh --seed
+docker exec <container> php artisan test
 ```
 
 En local, `MAIL_MAILER=log`: los emails de notificación de reportes (listos/fallidos) no se
@@ -377,10 +380,10 @@ Seeders masivos para verificar manualmente el reporte Excel y la asignación mas
 (50+ filas por hoja, distintos escenarios de estado):
 
 ```bash
-sail artisan db:seed --class=BulkReportReceivedSeeder             # 5 evaluadores + 120 RECEIVED
-sail artisan db:seed --class=BulkReportValidatedRejectedSeeder     # 5 evaluadores + 60 VALIDATED + 60 REJECTED
-sail artisan db:seed --class=BulkReportSingleEvaluatorSeeder       # 1 evaluador + 51 candidatos
-sail artisan db:seed --class=BulkReportSingleEvaluatorFullSheetSeeder
+docker exec <container> php artisan db:seed --class=BulkReportReceivedSeeder             # 5 evaluadores + 120 RECEIVED
+docker exec <container> php artisan db:seed --class=BulkReportValidatedRejectedSeeder     # 5 evaluadores + 60 VALIDATED + 60 REJECTED
+docker exec <container> php artisan db:seed --class=BulkReportSingleEvaluatorSeeder       # 1 evaluador + 51 candidatos
+docker exec <container> php artisan db:seed --class=BulkReportSingleEvaluatorFullSheetSeeder
 ```
 
 ## Documentación de la API
