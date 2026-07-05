@@ -3,9 +3,13 @@
 namespace Tests\Feature\Report;
 
 use App\Infrastructure\Report\ReportModel;
+use App\Infrastructure\Report\ReportStatus;
 use App\Jobs\GenerateReportJob;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class GenerateReportEndpointTest extends TestCase
@@ -125,6 +129,56 @@ class GenerateReportEndpointTest extends TestCase
         $second->assertJsonPath('status', 'pending');
 
         $this->assertDatabaseCount(ReportModel::class, 1);
+        Queue::assertPushed(GenerateReportJob::class, 1);
+    }
+
+    public function test_two_simultaneous_requests_with_the_same_idempotency_key_produce_only_one_report_row_and_one_dispatched_job(): void
+    {
+        Queue::fake();
+
+        $idempotencyKey = 'concurrent-replay-key';
+        $winningReportId = null;
+        $fired = false;
+
+        // Simulate a genuine race, not a sequential replay: right after
+        // this request's own "does a report with this key already exist?"
+        // check runs (and finds nothing — nobody has committed yet), a
+        // concurrent request wins the race and commits its own row first,
+        // a moment before this request attempts its own insert.
+        DB::listen(function (QueryExecuted $query) use ($idempotencyKey, &$winningReportId, &$fired): void {
+            if ($fired || ! str_contains($query->sql, 'idempotency_key')) {
+                return;
+            }
+
+            $fired = true;
+
+            $winner = ReportModel::query()->create([
+                'id' => (string) Str::uuid7(),
+                'requested_by_email' => 'winner@example.com',
+                'status' => ReportStatus::PENDING,
+                'idempotency_key' => $idempotencyKey,
+            ]);
+
+            GenerateReportJob::dispatch($winner->id);
+            $winningReportId = $winner->id;
+        });
+
+        $response = $this->postJson('/api/v1/reports', [
+            'email' => 'loser@example.com',
+        ], ['Idempotency-Key' => $idempotencyKey]);
+
+        // The losing request must gracefully replay the winner's result
+        // (200, not 202 and not a raw 500 from the unique constraint on
+        // idempotency_key), not create a second row.
+        $response->assertStatus(200);
+        $response->assertJsonPath('report_id', $winningReportId);
+
+        $this->assertDatabaseCount(ReportModel::class, 1);
+        $this->assertDatabaseHas(ReportModel::class, [
+            'id' => $winningReportId,
+            'requested_by_email' => 'winner@example.com',
+            'idempotency_key' => $idempotencyKey,
+        ]);
         Queue::assertPushed(GenerateReportJob::class, 1);
     }
 
