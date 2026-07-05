@@ -354,6 +354,17 @@ candidaturas no `VALIDATED` (o inexistentes) en un lote se omiten y se reportan 
 
 ## Cómo ejecutar el proyecto
 
+`.env` no está en el repo (está en `.gitignore`) — primer paso obligatorio, antes de levantar
+nada:
+
+```bash
+cp .env.example .env
+```
+
+`.env.example` ya trae `DB_HOST=mysql` / `REDIS_HOST=redis` (los nombres de servicio de
+`compose.yaml`, no `127.0.0.1`) y `DB_CONNECTION=mysql`, así que no hace falta editar nada a mano
+para que apunte al stack de Docker.
+
 ```bash
 docker compose up -d
 ```
@@ -361,13 +372,16 @@ docker compose up -d
 Ese único comando levanta los cuatro servicios de `compose.yaml`: `laravel.test` (la app),
 `queue` (worker de colas, `php artisan queue:work` con `restart: unless-stopped` — necesario para
 la generación de reportes ya que `QUEUE_CONNECTION=database`, arranca solo, sin paso manual
-adicional), `mysql` y `redis`.
+adicional), `mysql` y `redis`. En un clon nuevo (sin `vendor/` todavía) `queue` va a reiniciarse
+un par de veces hasta que el siguiente paso (`composer install`) termine — es el comportamiento
+esperado de `restart: unless-stopped`, no un error.
 
-Primera vez / mantenimiento (`<container>` es el nombre del servicio de la app —
-`docker ps` para confirmarlo, por defecto `<carpeta>-laravel.test-1`):
+Primera vez (`<container>` es el nombre del servicio de la app — `docker ps` para confirmarlo,
+por defecto `<carpeta>-laravel.test-1`):
 
 ```bash
 docker exec <container> composer install
+docker exec <container> php artisan key:generate
 docker exec <container> php artisan migrate:fresh --seed
 docker exec <container> php artisan test
 ```
