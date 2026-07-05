@@ -354,33 +354,27 @@ candidaturas no `VALIDATED` (o inexistentes) en un lote se omiten y se reportan 
 
 ## Cómo ejecutar el proyecto
 
-`.env` no está en el repo (está en `.gitignore`) — primer paso obligatorio, antes de levantar
-nada:
-
 ```bash
 cp .env.example .env
-```
-
-`.env.example` ya trae `DB_HOST=mysql` / `REDIS_HOST=redis` (los nombres de servicio de
-`compose.yaml`, no `127.0.0.1`) y `DB_CONNECTION=mysql`, así que no hace falta editar nada a mano
-para que apunte al stack de Docker.
-
-```bash
+docker compose run --rm laravel.test composer install --ignore-platform-reqs
 docker compose up -d
 ```
 
-Ese único comando levanta los cuatro servicios de `compose.yaml`: `laravel.test` (la app),
-`queue` (worker de colas, `php artisan queue:work` con `restart: unless-stopped` — necesario para
-la generación de reportes ya que `QUEUE_CONNECTION=database`, arranca solo, sin paso manual
-adicional), `mysql` y `redis`. En un clon nuevo (sin `vendor/` todavía) `queue` va a reiniciarse
-un par de veces hasta que el siguiente paso (`composer install`) termine — es el comportamiento
-esperado de `restart: unless-stopped`, no un error.
+`docker/8.3/` (imagen de la app) y `docker/mysql/` (script de init) son copias versionadas —no
+`.gitignore`d— de lo que Sail trae dentro de `vendor/laravel/sail/...`. Se sacaron de `vendor/`
+a propósito: si `compose.yaml` dependiera de rutas dentro de `vendor/`, el primer
+`docker compose run`/`up` en un clon nuevo (sin `vendor/` todavía) fallaría al no encontrar el
+contexto de build antes de poder correr `composer install`. Con esto, estos tres comandos
+alcanzan, sin pasos previos.
 
-Primera vez (`<container>` es el nombre del servicio de la app — `docker ps` para confirmarlo,
-por defecto `<carpeta>-laravel.test-1`):
+`docker compose up -d` levanta los cuatro servicios de `compose.yaml`: `laravel.test` (la app),
+`queue` (worker de colas, `php artisan queue:work` con `restart: unless-stopped` — necesario para
+la generación de reportes ya que `QUEUE_CONNECTION=database`, arranca solo), `mysql` y `redis`.
+
+Después, para migrar/poblar/testear (`<container>` = nombre del servicio de la app, ver
+`docker ps`, por defecto `<carpeta>-laravel.test-1`):
 
 ```bash
-docker exec <container> composer install
 docker exec <container> php artisan key:generate
 docker exec <container> php artisan migrate:fresh --seed
 docker exec <container> php artisan test
