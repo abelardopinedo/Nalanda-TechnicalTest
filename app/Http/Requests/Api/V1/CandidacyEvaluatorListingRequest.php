@@ -30,10 +30,9 @@ class CandidacyEvaluatorListingRequest extends FormRequest
         return [
             'sort' => ['nullable', 'string', Rule::in(array_keys(CandidacyEvaluatorListingQuery::FIELDS))],
             'direction' => ['nullable', 'string', Rule::in(['asc', 'desc'])],
-            'filter' => ['nullable', 'array'],
-            'filter.*' => ['nullable', 'string'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            ...$this->filterFieldRules(),
             ...$this->rangeFilterRules(),
         ];
     }

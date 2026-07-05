@@ -31,8 +31,7 @@ class GenerateReportRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email'],
-            'filter' => ['nullable', 'array'],
-            'filter.*' => ['nullable', 'string'],
+            ...$this->filterFieldRules(),
             ...$this->rangeFilterRules(),
         ];
     }

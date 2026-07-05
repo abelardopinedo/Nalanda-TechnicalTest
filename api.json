@@ -136,22 +136,6 @@
                         }
                     },
                     {
-                        "name": "filter[]",
-                        "in": "query",
-                        "schema": {
-                            "type": [
-                                "array",
-                                "null"
-                            ],
-                            "items": {
-                                "type": [
-                                    "string",
-                                    "null"
-                                ]
-                            }
-                        }
-                    },
-                    {
                         "name": "page",
                         "in": "query",
                         "schema": {
@@ -172,6 +156,56 @@
                             ],
                             "minimum": 1,
                             "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "filter[candidate_name]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[candidate_email]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[years]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[evaluator_name]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "filter[assigned_at]",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
                         }
                     },
                     {
@@ -803,15 +837,38 @@
                         "minimum": 0
                     },
                     "filter": {
-                        "type": [
-                            "array",
-                            "null"
-                        ],
-                        "items": {
-                            "type": [
-                                "string",
-                                "null"
-                            ]
+                        "type": "object",
+                        "properties": {
+                            "candidate_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "candidate_email": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "years": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "evaluator_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "assigned_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
                         }
                     }
                 },
