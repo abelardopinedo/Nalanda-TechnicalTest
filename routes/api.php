@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AssignEvaluatorController;
+use App\Http\Controllers\Api\V1\BulkAssignEvaluatorController;
 use App\Http\Controllers\Api\V1\CandidacyEvaluatorListingController;
 use App\Http\Controllers\Api\V1\CandidacySummaryController;
 use App\Http\Controllers\Api\V1\GenerateReportController;
@@ -15,6 +16,7 @@ Route::prefix('v1')->group(function () {
     Route::get('candidacies/{candidacy}/summary', CandidacySummaryController::class);
     Route::post('candidacies/{candidacy}/validate', ValidateCandidacyController::class);
     Route::post('candidacies/{candidacy}/evaluator', AssignEvaluatorController::class);
+    Route::post('evaluators/{evaluator}/assign-bulk', BulkAssignEvaluatorController::class);
     Route::post('reports', GenerateReportController::class);
     Route::get('reports/{report}', ShowReportController::class);
 });

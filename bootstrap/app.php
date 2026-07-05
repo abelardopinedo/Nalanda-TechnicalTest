@@ -2,6 +2,7 @@
 
 use Candidacy\Application\Exception\CandidacyNotFoundException;
 use Candidacy\Application\Exception\CandidacyValidationException;
+use Candidacy\Application\Exception\EvaluatorNotFoundException;
 use Candidacy\Domain\Exception\InvalidCandidacyStatusTransition;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -30,6 +31,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ], 422));
 
         $exceptions->render(fn (CandidacyNotFoundException $e) => response()->json([
+            'message' => $e->getMessage(),
+        ], 404));
+
+        $exceptions->render(fn (EvaluatorNotFoundException $e) => response()->json([
             'message' => $e->getMessage(),
         ], 404));
 
